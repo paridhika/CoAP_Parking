@@ -24,81 +24,22 @@
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
-# define SIZE 10
-# define LIGHTS 3
-# define SENSORS 5
-struct parking {
-	char ip_address[20];
-	char port[5];
-};
+#define SIZE 10
 
-struct sensors {
-	int lights[LIGHTS];
-//	struct parking *presence;
-	char name[20];
+struct parking {
+	char status[20];
 };
 
 struct parking **my_map;
 pthread_mutex_t my_map_mutex;
-struct sensors *my_sensors;
-pthread_mutex_t my_sensors_mutex;
-void initialize_lights() {
-	int i,j;
-	my_sensors = (struct sensors *)malloc(sizeof(struct sensors) * SENSORS);
-	for (i = 0; i < SENSORS; ++i){
-		char str1[20] = "sensor_";
-		char str2[3];
-		sprintf(str2,"%d",(i+1));
-		strcpy(my_sensors[i].name, strcat(str1,str2));
-		for (j = 0; j < LIGHTS; j++){
-			my_sensors[i].lights[j] = 0;
-		}
-//		my_sensor[i].presence = (struct parking *)malloc(sizeof(struct parking));
-//		strcpy(my_sensor[i].ip_address,"");
-//		strcpy(my_sensor[i].port,"");
-	}
-}
-
-char * post_sensor(char *name) {
-	int i,j;
-	for(i=0; i<SENSORS; i++){
-		if(strcmp(my_sensors[i].name,name) == 0){
-			for(j=0;j<LIGHTS;j++){
-				if(my_sensors[i].lights[j] == 1){
-					my_sensors[i].lights[j] = 0;
-					return "OFF";
-				}
-				else {
-					my_sensors[i].lights[j] = 1;
-					return "ON";
-				}
-			}
-			break;
-		}
-	}
-	return "OFF";
-}
-
-char * get_light(char *name){
-	int i;
-	for(i=0; i<SENSORS; i++){
-		if(strcmp(my_sensors[i].name,name) == 0){
-			if(my_sensors[i].lights[0] == 0)
-				return "OFF";
-			else return "ON";
-		}
-	}
-	return "OFF";
-}
 
 void initialize_map() {
 	int i,j;
 	my_map = (struct parking **)malloc(sizeof(struct parking *) * SIZE);
 	for (i = 0; i < SIZE; ++i){
 		my_map[i] = (struct parking *)malloc(SIZE * sizeof(struct parking));
-		for (j=0; j < SIZE; j++)
-			strcpy(my_map[i][j].ip_address,"");
-			strcpy(my_map[i][j].port,"");
+		for (j = 0; j < SIZE; j++)
+			strcpy(my_map[i][j].status,"EMPTY");
 	}
 }
 
@@ -108,10 +49,11 @@ void find_location(char **temp) {
 	char str2[100];
 	for(i = 0; i < SIZE; i++) {
 		for(j = 0; j < SIZE; j++){
-			if(strcmp(my_map[i][j].ip_address,"") == 0){
+			if(strcmp(my_map[i][j].status,"EMPTY") == 0){
 				sprintf(str1,"%d",i);
 				sprintf(str2,"%d",j);
 				*temp = strcat(strcat(str1 , ",") , str2);
+				strcpy(my_map[i][j].status,"OCCUPIED");
 				return;
 			}
 		}
@@ -119,31 +61,21 @@ void find_location(char **temp) {
 }
 
 
-void find_put_location(char *loc) {
-	int i,j;
-	for(i = 0; i < SIZE; i++) {
-		for(j = 0; j < SIZE; j++){
-			if(strcmp(my_map[i][j].ip_address,"") == 0){
-				char * ip = strtok(loc,",");
-				char * port = strtok(NULL,",");
-				strcpy(my_map[i][j].ip_address,ip);
-				strcpy(my_map[i][j].port,port);
-				return;
-			}
-		}
+void put_location(char *loc) {
+	char * x = strtok(loc,",");
+	char * y = strtok(NULL,",");
+	int i = atoi(x), j = atoi(y);
+	if(strcmp(my_map[i][j].status,"EMPTY") == 0){
+		strcpy(my_map[i][j].status,"OCCUPIED");
 	}
 }
 
-void delete_location() {
-	int i,j;
-	for(i = 0; i < SIZE; i++) {
-		for(j = 0; j < SIZE; j++){
-			if(strcmp(my_map[i][j].ip_address,"") != 0) {
-				strcpy(my_map[i][j].ip_address,"");
-				strcpy(my_map[i][j].port,"");
-				return;
-			}
-		}
+void delete_location(char *loc) {
+	char * x = strtok(loc,",");
+	char * y = strtok(NULL,",");
+	int i = atoi(x), j = atoi(y);
+	if(strcmp(my_map[i][j].status,"OCCUPIED") == 0){
+		strcpy(my_map[i][j].status,"EMPTY");
 	}
 }
 
@@ -151,10 +83,7 @@ void print_map() {
 	int i,j;
 	for(i=0;i<SIZE;i++) {
 		for(j=0;j<SIZE;j++) {
-			if(strcmp(my_map[i][j].ip_address,"")) {
-				printf("%s:%s |",my_map[i][j].ip_address,my_map[i][j].port);
-			}
-			else printf("Empty | ");
+			printf("%s|",my_map[i][j].status);
 		}
 		printf("\n");
 	}
@@ -204,58 +133,6 @@ hnd_get_index(coap_context_t  *ctx, struct coap_resource_t *resource,
 }
 //Paridhika
 
-void
-hnd_get_light(coap_context_t  *ctx, struct coap_resource_t *resource,
-	      const coap_endpoint_t *local_interface,
-	      coap_address_t *peer, coap_pdu_t *request, str *token,
-	      coap_pdu_t *response) {
-
-	 size_t size;
-	  unsigned char *data;
-	  coap_get_data(request, &size, &data);
-  unsigned char buf[3];
-  response->hdr->code = COAP_RESPONSE_CODE(205);
-
-  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x2ffff), buf);
-
-  // find free slot in my_map send (i,j)
-  pthread_mutex_lock(&my_sensors_mutex);
-  char * status = get_light((char *)data);
-  pthread_mutex_unlock(&my_sensors_mutex);
-  coap_add_data(response, strlen(status), (unsigned char *)status);
-}
-
-void
-hnd_post_sensor(coap_context_t  *ctx, struct coap_resource_t *resource,
-	     const coap_endpoint_t *local_interface,
-	     coap_address_t *peer, coap_pdu_t *request, str *token,
-	     coap_pdu_t *response) {
-  size_t size;
-  unsigned char *data;
-
-  coap_get_data(request, &size, &data);
-  char *name = (char *)data;
-//  printf("%s\n",name);
-  unsigned char buf[3];
-  response->hdr->code = COAP_RESPONSE_CODE(205);
-
-  coap_add_option(response, COAP_OPTION_CONTENT_TYPE,
-	  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-
-  coap_add_option(response, COAP_OPTION_MAXAGE,
-	  coap_encode_var_bytes(buf, 0x2ffff), buf);
-  pthread_mutex_lock(&my_sensors_mutex);
-  char * status = post_sensor(name);
-  pthread_mutex_unlock(&my_sensors_mutex);
-  coap_add_data(response, strlen(status), (unsigned char *)status);
-}
-
-
-
 
 void 
 hnd_get_location(coap_context_t  *ctx, struct coap_resource_t *resource, 
@@ -302,8 +179,8 @@ hnd_put_location(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_add_option(response, COAP_OPTION_MAXAGE,
 	  coap_encode_var_bytes(buf, 0x2ffff), buf);
   pthread_mutex_lock(&my_map_mutex);
-  find_put_location(location);
- // print_map();
+  put_location(location);
+  //print_map();
   pthread_mutex_unlock(&my_map_mutex);
   coap_add_data(response, strlen(location), data);
 }
@@ -317,6 +194,7 @@ hnd_delete_location(coap_context_t  *ctx, struct coap_resource_t *resource,
   unsigned char *data;
 
   coap_get_data(request, &size, &data);
+  char *location = (char *)data;
   unsigned char buf[3];
 
   response->hdr->code = COAP_RESPONSE_CODE(205);
@@ -327,8 +205,8 @@ hnd_delete_location(coap_context_t  *ctx, struct coap_resource_t *resource,
   coap_add_option(response, COAP_OPTION_MAXAGE,
 	  coap_encode_var_bytes(buf, 0x2ffff), buf);
   pthread_mutex_lock(&my_map_mutex);
-  delete_location();
- // print_map();
+  delete_location(location);
+  //print_map();
   pthread_mutex_unlock(&my_map_mutex);
 //  coap_add_data(response, strlen(data), data);
 }
@@ -562,7 +440,6 @@ void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
   initialize_map();
-  initialize_lights();
  // print_map();
 
   r = coap_resource_init(NULL, 0, 0);
@@ -612,10 +489,6 @@ init_resources(coap_context_t *ctx) {
   r->observable = 1;
   coap_add_resource(ctx, r);
   location_resource = r;
-
-   r = coap_resource_init((unsigned char *)"sensor", 6, 0);
-   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_light);
-   coap_register_handler(r, COAP_REQUEST_POST, hnd_post_sensor);
 
    coap_add_attr(r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
    coap_add_attr(r, (unsigned char *)"title", 5, (unsigned char *)"\"Sensor\"", 8, 0);

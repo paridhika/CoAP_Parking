@@ -25,7 +25,7 @@ class ExampleThread(threading.Thread):
 #		    				print line
 					out,err = p.communicate()
 					if out:
-						print out.rstrip().splitlines()[2]
+						print out.rstrip().splitlines()
 					if(p.poll() != None):
 		    				end = time.time()
 #                                              	print "Execution = " + str(end - process.start_time)
