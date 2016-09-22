@@ -23,3 +23,11 @@ The system runs of 3 types of clients corresponding to 3 request types.
 Client threads are running independent of each other and service time for each client is noted to evaluate prformance. Clients are arriving according to Poisson Distribution.
 
 File Location:- libcoap-code/examples/parking_simulation.py
+
+## Installation:-
+* Inside libcoap-code folder run sudo make install
+* Type following commands to run CoAP Server - cd examples/ and ./test-server
+* Now to run parking simulation open a new tab in current directory and run python parking_simulation.py
+
+## Simulation Details:-
+The simulation runs three separate threads for three types of clients. Thus simultaneously pushing out several requests on the single server. The service time is then noted for each clients and written in csv files "get_simulation_service_time.csv", "put_simulation_service_time.csv", "delete_simulation_service_time.csv". Also the mean service time and server throughput is written in corresponding results.csv files. Graphs are plotted to analyse the queueing delay on changing the mean arrival rates of these client requests and also the server utilization.
