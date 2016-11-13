@@ -24,8 +24,11 @@ Client threads are running independent of each other and service time for each c
 
 File Location:- libcoap-code/examples/parking_simulation.py
 
+### Makefile changes:-
+File Location:- libcoap-code/examples/Makefile
+
 ## Installation:-
-* Inside libcoap-code folder run sudo make install
+* Inside libcoap-code folder run make & sudo make install
 * Type following commands to run CoAP Server - cd examples/ and ./test-server
 * Now to run parking simulation open a new tab in current directory and run python parking_simulation.py
 
