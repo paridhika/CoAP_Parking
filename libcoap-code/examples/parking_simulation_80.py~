@@ -53,8 +53,8 @@ class PutClientThread(threading.Thread):
 		wait = random.expovariate(self.mean_hold)
 		filled_slotsdict[location] = time.time() + wait
 	def run(self):
-		f1 = open('put_simulation_service_time.csv', 'wt')
-		f = open('put_simulation_result.csv', 'wt')
+		f1 = open('Results/run1/80/put_simulation_service_time_80_run1.csv', 'wt')
+		f = open('Results/run1/80/put_simulation_result_80_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
@@ -93,8 +93,8 @@ class GetClientThread(threading.Thread):
 		self.mean_hold = mean_hold
 		self.count = count
 	def run(self):
-		f1 = open('get_simulation_service_time.csv', 'wt')
-		f = open('get_simulation_result.csv', 'wt')
+		f1 = open('Results/run1/80/get_simulation_service_time_80_run1.csv', 'wt')
+		f = open('Results/run1/80/get_simulation_result_80_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
@@ -126,8 +126,8 @@ class DeleteClientThread(threading.Thread):
 		self.mean_hold = mean_hold
 		self.count = count
 	def run(self):
-		f1 = open('delete_simulation_service_time.csv', 'wt')
-		f = open('delete_simulation_result.csv', 'wt')
+		f1 = open('Results/run1/80/delete_simulation_service_time_80_run1.csv', 'wt')
+		f = open('Results/run1/80/delete_simulation_result_80_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
@@ -170,7 +170,7 @@ class DeleteClientThread(threading.Thread):
 		writer.writerow((delete_mean , sum/self.count, (int)(self.count*3600/sum)))
 		f.close()
 			
-class ProcessStore():
+class ProcessStore()6
 	def __init__(self,state,start_time):
 		self.state = state
 		self.start_time = start_time
@@ -184,8 +184,8 @@ empty_slotsset = set()
 filled_slotsdict = OrderedDict()
 initEmptySet(empty_slotsset)
 lockobj = threading.Lock()
-put_mean = 1.2
-get_mean = 1.2
+put_mean = 2.95
+get_mean = 7.6
 mean_hold = 1
 count = 1000
 put_thread = PutClientThread(put_mean,mean_hold,count)

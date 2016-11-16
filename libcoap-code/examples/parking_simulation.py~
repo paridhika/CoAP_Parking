@@ -187,7 +187,7 @@ lockobj = threading.Lock()
 put_mean = 1.2
 get_mean = 1.2
 mean_hold = 1
-count = 1000
+count = 100
 put_thread = PutClientThread(put_mean,mean_hold,count)
 put_thread.start()
 get_thread = GetClientThread(get_mean,mean_hold,count)

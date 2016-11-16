@@ -24,7 +24,7 @@
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
-#define SIZE 10
+#define SIZE 100
 
 struct parking {
 	char status[20];
