@@ -42,6 +42,36 @@ class ExampleThread(threading.Thread):
 		    				end = time.time()
 		    				self.sumarray.append(end - process.start_time)
 						break;
+
+class ProcessThread(threading.Thread):
+	def __init__(self,process,sumarray,mean_hold):
+		threading.Thread.__init__(self)
+		self.process = process
+		self.sumarray = sumarray
+		self.mean_hold = mean_hold
+	def store_time(self,location):
+		lockobj.acquire()
+		print "get: " + location
+		if location in empty_slotsset:
+			empty_slotsset.remove(location)
+		wait = random.expovariate(self.mean_hold)
+		filled_slotsdict[location] = time.time() + wait
+		lockobj.release()
+	def run(self):
+		process = self.process
+		p = subprocess.Popen(process.state, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+		while(True):
+    			out,err = p.communicate()
+			if out:
+				location = "0,0"
+				if len(out.rstrip().splitlines()) > 1:
+					location = str(out.rstrip().splitlines()[2])
+				self.store_time(location)
+			if(p.poll() != None):
+    				end = time.time()
+    				self.sumarray.append(end - process.start_time)
+				break;
+
 class PutClientThread(threading.Thread):
 	def __init__(self,put_mean,mean_hold,count):
 		threading.Thread.__init__(self)
@@ -53,16 +83,14 @@ class PutClientThread(threading.Thread):
 		wait = random.expovariate(self.mean_hold)
 		filled_slotsdict[location] = time.time() + wait
 	def run(self):
-		f1 = open('put_simulation_service_time_20_run1.csv', 'wt')
-		f = open('put_simulation_result_20_run1.csv', 'wt')
+		f1 = open('Results/run1/20/put_simulation_service_time_20_run1.csv', 'wt')
+		f = open('Results/run1/20/put_simulation_result_20_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
 		service.writerow( ('Mean', 'Count', 'Service Time') )
 		sumarray = []
 		threads = Queue()
-		thread = ExampleThread(threads, self.count, sumarray,self.mean_hold)
-		thread.start()
 		sum = 0.0;
 		for index in range(0,self.count):
 			wait = random.expovariate(self.put_mean)
@@ -75,9 +103,12 @@ class PutClientThread(threading.Thread):
 			state = "xterm -e ./coap-client -m put coap://[::1]/location -e {0} &".format(location)
 			start_time = time.time()
 			process = ProcessStore(state, start_time)
-			threads.put(process)
+			thread = ProcessThread(process, sumarray,self.mean_hold)
+			thread.start()
+			threads.put(thread)
 			time.sleep(wait);
-		thread.join();
+		while not threads.empty():
+			threads.get().join()
 		i = 1
 		for val in sumarray:
 			service.writerow((self.put_mean , i, val))
@@ -93,25 +124,26 @@ class GetClientThread(threading.Thread):
 		self.mean_hold = mean_hold
 		self.count = count
 	def run(self):
-		f1 = open('get_simulation_service_time_20_run1.csv', 'wt')
-		f = open('get_simulation_result_20_run1.csv', 'wt')
+		f1 = open('Results/run1/20/get_simulation_service_time_20_run1.csv', 'wt')
+		f = open('Results/run1/20/get_simulation_result_20_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
 		service.writerow( ('Mean', 'Count', 'Service Time') )
 		sumarray = []
 		threads = Queue()
-		thread = ExampleThread(threads, self.count, sumarray,self.mean_hold)
-		thread.start()
 		sum = 0.0;
 		for index in range(0,self.count):
 			wait = random.expovariate(self.get_mean)
 			state = "./coap-client -m get coap://[::1]/location &"
 			start_time = time.time()
 			process = ProcessStore(state, start_time)
-			threads.put(process)
+			thread = ProcessThread(process, sumarray,self.mean_hold)
+			thread.start()
+			threads.put(thread)
 			time.sleep(wait);
-		thread.join();
+		while not threads.empty():
+			threads.get().join()
 		i = 1
 		for val in sumarray:
 			service.writerow((self.get_mean , i, val))
@@ -126,8 +158,8 @@ class DeleteClientThread(threading.Thread):
 		self.mean_hold = mean_hold
 		self.count = count
 	def run(self):
-		f1 = open('delete_simulation_service_time_20_run1.csv', 'wt')
-		f = open('delete_simulation_result_20_run1.csv', 'wt')
+		f1 = open('Results/run1/20/delete_simulation_service_time_20_run1.csv', 'wt')
+		f = open('Results/run1/20/delete_simulation_result_20_run1.csv', 'wt')
 		writer = csv.writer(f)
 		service = csv.writer(f1)
 		writer.writerow( ('Arrival Rate', 'Service Time','Throughput') )
@@ -136,31 +168,35 @@ class DeleteClientThread(threading.Thread):
 		arrival_interval = []	#array to store interarrival times of delete processes
 		arrival_start = time.time()
 		threads = Queue()
-		thread = ExampleThread(threads, self.count, sumarray,self.mean_hold)
-		thread.start()
 		sum = 0.0
 		delete_mean = 0.0		#variable to calculate mean interarrival time of delete
-		temp_count = self.count
-		while(temp_count !=0):
-			if any(filled_slotsdict):
-				sorted_dict = OrderedDict(sorted(filled_slotsdict.items(), key=lambda t: t[1]))
-				location,kill_time = sorted_dict.items()[0]
-				if kill_time <= time.time():
-					arrival_interval.append(kill_time - arrival_start)
-					delete_mean += kill_time - arrival_start
-					arrival_start = kill_time
-					lockobj.acquire()
-					if location in filled_slotsdict:
-						filled_slotsdict.pop(location)
-					empty_slotsset.add(location)
-					lockobj.release()
-					temp_count -= 1
-					print "delete at: " + location
-					state = "xterm -e ./coap-client -m delete coap://[::1]/location -e {0} &".format(location)
-					start_time = time.time()
-					process = ProcessStore(state, start_time)
-					threads.put(process)
-		thread.join();
+		for index in range(0,self.count):
+			while any(filled_slotsdict) == False: 
+				#print "empty" + str(index) +" " + str(self.count)
+				if index >= self.count:
+					break
+				pass
+			sorted_dict = OrderedDict(sorted(filled_slotsdict.items(), key=lambda t: t[1]))
+			location,kill_time = sorted_dict.items()[0]
+			while kill_time > time.time():
+				#print "wait" + str(index)
+				pass
+			arrival_interval.append(kill_time - arrival_start)
+			delete_mean += kill_time - arrival_start
+			arrival_start = kill_time
+			lockobj.acquire()
+			filled_slotsdict.pop(location)
+			empty_slotsset.add(location)
+			lockobj.release()
+			print "delete at: " + location
+			state = "xterm -e ./coap-client -m delete coap://[::1]/location -e {0} &".format(location)
+			start_time = time.time()
+			process = ProcessStore(state, start_time)
+			thread = ProcessThread(process, sumarray,self.mean_hold)
+			thread.start()
+			threads.put(thread)
+		while not threads.empty():
+			threads.get().join()
 		i = 1
 		delete_mean /= self.count
 		for val in sumarray:
