@@ -219,15 +219,15 @@ empty_slotsset = set()
 filled_slotsdict = OrderedDict()
 initEmptySet(empty_slotsset)
 lockobj = threading.Lock()
-put_mean = 2.95
-get_mean = 7.6
+put_mean = 4.29999
+get_mean = 4.99999
 mean_hold = 1
 count = 1000
 put_thread = PutClientThread(put_mean,mean_hold,count)
 put_thread.start()
 get_thread = GetClientThread(get_mean,mean_hold,count)
 get_thread.start()
-delete_thread = DeleteClientThread(mean_hold,2*count-50)
+delete_thread = DeleteClientThread(mean_hold,2*count)
 delete_thread.start()
 put_thread.join()
 delete_thread.join()
